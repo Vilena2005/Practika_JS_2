@@ -19,6 +19,7 @@ header {
     justify-content: center;
     align-items: center;
     height: 100px;
+    margin: 0;
 }
 
 .task {
@@ -37,4 +38,12 @@ header {
 }
 .finish {
     color: #9298E7;
+}
+.create-task {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
 }
