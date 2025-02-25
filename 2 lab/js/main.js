@@ -1,38 +1,60 @@
 Vue.component('note-app', {
     template: `
-    <div id="note">
-        <header>
-            <h1 class="note-title">NoteBook</h1>
-            <task-create @create-task="addTask" :taskCount="tasks.length"></task-create>
-        </header>
-        <main>
-            <div class="task">
-                <task-start :task="task" class="start">START</task-start>
-            </div>
-            <div class="task">
-                <task-process :task="task" class="process">PROCESS</task-process>
-            </div>
-            <div class="task">
-                <task-finish :task="completedTasks" class="finish">FINISHED</task-finish>
-            </div>
-        </main>
-    </div>
+        <div>
+            <header class="app-header">
+                <h1 class="app-title">Note</h1>
+                <div class="header-buttons">
+                    <task-create @create-task="addTask" :taskCount="tasks.length"></task-create>
+                    <button @click="clearAllTasks" class="clear-button">Очистить все заметки</button>
+                </div>
+            </header>
+            <main>
+                <div class="tasks">
+                    <task-on-start :tasks="tasks" :completedTasks="completedTasks" @transfer-task="moveTaskToProcess"></task-on-start>
+                </div>
+                <div class="tasks">
+                    <task-process :tasks="tasks" :completed-tasks="completedTasks" @transfer-task="moveTaskToFinish"></task-process>
+                </div>
+                <div class="tasks">
+                    <task-finish :completedTasks="completedTasks" :finished-tasks="finishedTasks"></task-finish>
+                </div>
+            </main>
+        </div>
     `,
-    data () {
+    data() {
         return {
-            tasks: JSON.parse(localStorage.getItem('task')) || [],
+            tasks: JSON.parse(localStorage.getItem('tasks')) || [],
             completedTasks: JSON.parse(localStorage.getItem('completedTasks')) || [],
             finishedTasks: JSON.parse(localStorage.getItem('finishedTasks')) || []
+        };
+    },
+    watch: {
+        tasks: {
+            handler(newTasks) {
+                localStorage.setItem('tasks', JSON.stringify(newTasks));
+            },
+            deep: true
+        },
+        completedTasks: {
+            handler(newCompletedTasks) {
+                localStorage.setItem('completedTasks', JSON.stringify(newCompletedTasks));
+            },
+            deep: true
+        },
+        finishedTasks: {
+            handler(newFinishedTasks) {
+                localStorage.setItem('finishedTasks', JSON.stringify(newFinishedTasks));
+            },
+            deep: true
         }
     },
     methods: {
         addTask(taskData) {
             this.tasks.push({
                 title: taskData.title,
-                items: taskData.items.map(item => ({ text: item, checked: false }))
+                items: taskData.items.map(item => ({ ...item, checked: false }))
             });
         },
-        
         moveTaskToProcess(task) {
             const index = this.tasks.findIndex(t => t === task);
             if (index !== -1) {
@@ -40,110 +62,136 @@ Vue.component('note-app', {
             }
             let countChecked = task.items.filter(item => item.checked).length;
             if (countChecked >= Math.ceil(task.items.length / 2)) {
-                this.tasksInProcess.push(task);
+                this.completedTasks.push(task);
             }
         },
-        
         moveTaskToFinish(task) {
-            const index = this.tasksInProcess.findIndex(t => t === task);
+            const index = this.completedTasks.findIndex(t => t === task);
             if (index !== -1) {
-                this.tasksInProcess.splice(index, 1);
-            } else {
-                index = this.tasks.findIndex(t => t === task);
-                if (index !== -1) {
-                    this.tasks.splice(index, 1);
-                }
+                this.completedTasks.splice(index, 1);
             }
             let countChecked = task.items.filter(item => item.checked).length;
             if (countChecked === task.items.length) {
-                task.finishDate = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'});
+                task.finishDate = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: 'second' });
                 this.finishedTasks.push(task);
             }
+        },
+        clearAllTasks() {
+            this.tasks = [];
+            this.completedTasks = [];
+            this.finishedTasks = [];
+            localStorage.removeItem('tasks');
+            localStorage.removeItem('completedTasks');
+            localStorage.removeItem('finishedTasks');
+        }
+    },
+    computed: {
+        isTaskLimitReached() {
+            return this.tasks.length >= 3;
         }
     }
-})
+});
 
 Vue.component('task-create', {
     template: `
-    <div class="create-task">
-        <input type="text" v-model="Name" placeholder="Название">
-        <input type="text" v-model="Item1" placeholder="Пункт 1">
-        <input type="text" v-model="Item2" placeholder="Пункт 2">
-        <input type="text" v-model="Item3" placeholder="Пункт 3">
-        <input type="text" v-model="Item4" placeholder="Пункт 4">
-        <button @click="createTask">Create task</button>
-    </div>
+        <div class="create-task">
+            <input type="text" v-model="title" placeholder="Заголовок">
+            <input type="text" v-model="itemOne" placeholder="Пункт один">
+            <input type="text" v-model="itemTwo" placeholder="Пункт два">
+            <input type="text" v-model="itemThree" placeholder="Пункт три">
+            <input type="text" v-model="itemFour" placeholder="Пункт четыре">
+            <button @click="createTask" class="create-button">Create task</button>
+            <h4 v-if="isTaskLimitReached">Перед созданием новой задачи, выполните хотя бы одну задачу в первом столбце</h4>
+        </div>
     `,
-    computed:{
-        isTaskLimitReached(){
+    computed: {
+        isTaskLimitReached() {
             return this.$parent.isTaskLimitReached;
         }
     },
-    data () {
+    data() {
         return {
-            name: '',
-            Item1: '',
-            Item2: '',
-            Item3: '',
-            Item4: ''
-        }
+            title: '',
+            itemOne: '',
+            itemTwo: '',
+            itemThree: '',
+            itemFour: ''
+        };
     },
     methods: {
         createTask() {
             if (this.$parent.tasks.some(task => task.title === this.title) ||
                 this.$parent.completedTasks.some(task => task.title === this.title) ||
                 this.$parent.finishedTasks.some(task => task.title === this.title)) {
-                    alert("Задача с таким названием уже существует");
-                    return;
-            }
-            if (this.itemTwo() !== '') {
-                items.push({text: this.itemTwo });
+                alert("Задача с таким названием уже существует");
+                return;
             }
 
-            if (this.itemThree() !== '') {
-                items.push({text: this.itemThree });
+            const items = [
+                { id: 1, text: this.itemOne },
+                { id: 2, text: this.itemTwo },
+                { id: 3, text: this.itemThree },
+                { id: 4, text: this.itemFour }
+            ];
+
+            if (items.some(item => item.text.trim() === '')) {
+                alert("Пожалуйста, заполните все 4 пункта.");
+                return;
             }
 
-            if (this.itemFour() !== '') {
-                items.push({text: this.itemFour });
-            }
-
-            if (this.itemFive() !== '') {
-                items.push({text: this.itemFive });
-            }
+            const taskData = {
+                title: this.title,
+                items: items
+            };
             this.$emit('create-task', taskData);
             this.cleanTask();
         },
         cleanTask() {
-            this.name = '';
-            this.Item1 = '';
-            this.Item2 = '';
-            this.Item3 = '';
-            this.Item4 = '';
+            this.title = '';
+            this.itemOne = '';
+            this.itemTwo = '';
+            this.itemThree = '';
+            this.itemFour = '';
         }
     }
-})
-  
-Vue.component('task-start', {
+});
+
+Vue.component('task-on-start', {
+    props: ['tasks', 'completedTasks'],
     template: `
-        <h3>{{ task.title }}</h3>
-            <h4 v-if="isTaskProcessFull">Перед тем, как выполнять 
-            задачи этого столбца, выполните хотя бы одну задачу второго столбца</h4>
+        <div>
+            <h3 class="start">START</h3>
+            <h4 v-if="isTaskProcessFull">Перед тем, как выполнять задачи этого столбца, выполните хотя бы одну задачу второго столбца</h4>
             <div v-for="(task, index) in tasks" :key="task.title" class="task task-move"
-        <ul>
-            <li v-for="item in task.items" :key="item.id">
-                <input type="checkbox" :id="item.id" v-model="item.checked" 
-                @change="checkItems(task, completedTasks)" :disabled="isTaskProcessFull || ifChecked(item)"> 
-                <p>{{ item.text }}</p>
-            </li>
-        </ul>
+                 draggable="true"
+                 @dragstart="onDragStart(index, $event)"
+                 @dragover.prevent
+                 @drop="onDrop(index, $event)"
+                 @dragend="onDragEnd"
+            >
+                <h3>{{ task.title }}</h3>
+                <ul class="task-list">
+                    <li class="task-list-item" v-for="item in task.items" :key="item.id">
+                        <input type="checkbox" :id="item.id" v-model="item.checked"
+                               @change="checkItems(task, completedTasks, item)"
+                               :disabled="isTaskProcessFull || ifChecked(item)">
+                        <p>{{ item.text }}</p>
+                    </li>
+                </ul>
+            </div>
+        </div>
     `,
+    computed: {
+        isTaskProcessFull() {
+            return this.completedTasks.length >= 5;
+        }
+    },
     methods: {
-        checkItems() {
-        if (this.isTaskProcessFull) {
-            alert("Task column full");
-            item.checked = false;
-            return;
+        checkItems(task, completedTasks, item) {
+            if (this.isTaskProcessFull) {
+                alert("Task column full");
+                item.checked = false;
+                return;
             }
 
             let totalItems = task.items.length;
@@ -157,25 +205,57 @@ Vue.component('task-start', {
                     this.$emit('transfer-task', this.tasks.splice(index, 1)[0]);
                 }
             }
+        },
+        ifChecked(item) {
+            return item.checked;
+        },
+        onDragStart(index, event) {
+            event.dataTransfer.setData('text/plain', index);
+            event.dataTransfer.effectAllowed = 'move';
+            this.draggedIndex = index;
+        },
+        onDragOver(event) {
+            event.preventDefault();
+        },
+        onDrop(index, event) {
+            const droppedIndex = parseInt(event.dataTransfer.getData('text/plain'), 10);
+
+            if (droppedIndex !== index) {
+                const movedItem = this.tasks[droppedIndex];
+                this.$set(this.tasks, droppedIndex, this.tasks[index]);
+                this.$set(this.tasks, index, movedItem);
+            }
+        },
+        onDragEnd(event) {
+            this.draggedIndex = null;
         }
     }
-})
+});
 
 Vue.component('task-process', {
+    props: ['tasks', 'completedTasks'],
     template: `
-    <div>
-        <h3>{{ task.title }}</h3>
-            <ul>
-                <li v-for="item in task.items" :key="item.id">
-                    <input type="checkbox" :id="item.id" v-model="item.checked" 
-                    @change="checkItems(task, completedTasks)" :disabled="isTaskProcessFull || ifChecked(item)"> 
-                    <p>{{ item.text }}</p>
-                </li>
-            </ul>
-    </div>
+        <div class="task-process">
+            <h3 class="process">PROCESS</h3>
+            <div v-for="(completedTask, index) in completedTasks" :key="completedTask.title" class="task task-move"
+                 draggable="true"
+                 @dragstart="onDragStart(index, $event)"
+                 @dragover.prevent
+                 @drop="onDrop(index, $event)"
+                 @dragend="onDragEnd"
+            >
+                <h3>{{ completedTask.title }}</h3>
+                <ul class="task-list">
+                    <li class="task-list-item" v-for="item in completedTask.items" :key="item.id">
+                        <input type="checkbox" :id="item.id" v-model="item.checked" @change="checkItems(completedTask, item)" :disabled="ifChecked(item)">
+                        <p :class="{ 'completed': item.checked }">{{ item.text }}</p>
+                    </li>
+                </ul>
+            </div>
+        </div>
     `,
     methods: {
-        checkItems() {
+        checkItems(completedTask, item) {
             let totalItems = completedTask.items.length;
             let checkedItems = completedTask.items.filter(item => item.checked).length;
 
@@ -188,28 +268,50 @@ Vue.component('task-process', {
                 }
             }
         },
-        ifChecked() {
+        ifChecked(item) {
             return item.checked;
         },
+        onDragStart(index, event) {
+            event.dataTransfer.setData('text/plain', index);
+            event.dataTransfer.effectAllowed = 'move';
+            this.draggedIndex = index;
+        },
+        onDragOver(event) {
+            event.preventDefault();
+        },
+        onDrop(index, event) {
+            const droppedIndex = parseInt(event.dataTransfer.getData('text/plain'), 10);
+
+            if (droppedIndex !== index) {
+                const movedItem = this.completedTasks[droppedIndex];
+                this.$set(this.completedTasks, droppedIndex, this.completedTasks[index]);
+                this.$set(this.completedTasks, index, movedItem);
+            }
+        },
+        onDragEnd(event) {
+            this.draggedIndex = null;
+        }
     }
-})
+});
 
 Vue.component('task-finish', {
+    props: ['completedTasks', 'finishedTasks'],
     template: `
-    <div class="task-finish">
+        <div class="task-finish">
+            <h3 class="finish">FINISH</h3>
             <div v-for="finishedTask in finishedTasks" :key="finishedTask.title" class="task">
                 <h3>{{ finishedTask.title }}</h3>
-                <ul>
-                    <li v-for="item in finishedTask.items" :key="item.id">
+                <ul class="task-list">
+                    <li class="task-list-item" v-for="item in finishedTask.items" :key="item.id">
                         <p>{{ item.text }}</p>
                     </li>
                 </ul>
                 <p>Выполнено: {{ finishedTask.finishDate }}</p>
             </div>
         </div>
-    `
-})
+    `,
+});
 
-let app = new Vue ( {
+let app = new Vue({
     el: '#app'
-})
+});
