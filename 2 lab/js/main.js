@@ -100,7 +100,7 @@ Vue.component('task-create', {
             <input type="text" v-model="itemTwo" placeholder="Пункт два">
             <input type="text" v-model="itemThree" placeholder="Пункт три">
             <input type="text" v-model="itemFour" placeholder="Пункт четыре">
-            <button @click="createTask" class="create-button">Create task</button>
+            <button @click="createTask" class="create-button">Создать заметку</button>
             <h4 v-if="isTaskLimitReached">Перед созданием новой задачи, выполните хотя бы одну задачу в первом столбце</h4>
         </div>
     `,
@@ -157,7 +157,10 @@ Vue.component('task-create', {
 });
 
 Vue.component('task-on-start', {
-    props: ['tasks', 'completedTasks'],
+    props: [
+    'tasks', 
+    'completedTasks'
+    ],
     template: `
         <div>
             <h3 class="start">START</h3>
@@ -233,7 +236,10 @@ Vue.component('task-on-start', {
 });
 
 Vue.component('task-process', {
-    props: ['tasks', 'completedTasks'],
+    props: [
+    'tasks', 
+    'completedTasks'
+    ],
     template: `
         <div class="task-process">
             <h3 class="process">PROCESS</h3>
