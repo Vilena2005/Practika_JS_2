@@ -60,6 +60,7 @@ Vue.component('note-app', {
             if (index !== -1) {
                 this.tasks.splice(index, 1);
             }
+
             let countChecked = task.items.filter(item => item.checked).length;
             if (countChecked >= Math.ceil(task.items.length / 2)) {
                 this.completedTasks.push(task);
@@ -70,9 +71,10 @@ Vue.component('note-app', {
             if (index !== -1) {
                 this.completedTasks.splice(index, 1);
             }
+
             let countChecked = task.items.filter(item => item.checked).length;
             if (countChecked === task.items.length) {
-                task.finishDate = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: 'second' });
+                task.finishDate = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 this.finishedTasks.push(task);
             }
         },
@@ -99,7 +101,8 @@ Vue.component('task-create', {
             <input type="text" v-model="itemOne" placeholder="Пункт один">
             <input type="text" v-model="itemTwo" placeholder="Пункт два">
             <input type="text" v-model="itemThree" placeholder="Пункт три">
-            <input type="text" v-model="itemFour" placeholder="Пункт четыре">
+            <input type="text" v-model="itemFour" v-if="itemThree !== '' && itemThree !== null" placeholder="Пункт четыре">
+            <input type="text" v-model="itemFive" v-if="itemFour !== '' && itemFour !== null" placeholder="Пункт пять">
             <button @click="createTask" class="create-button">Создать заметку</button>
             <h4 v-if="isTaskLimitReached">Перед созданием новой задачи, выполните хотя бы одну задачу в первом столбце</h4>
         </div>
@@ -109,17 +112,24 @@ Vue.component('task-create', {
             return this.$parent.isTaskLimitReached;
         }
     },
+    props: ['taskCount'],
     data() {
         return {
             title: '',
             itemOne: '',
             itemTwo: '',
             itemThree: '',
-            itemFour: ''
+            itemFour: '',
+            itemFive: ''
         };
     },
     methods: {
         createTask() {
+            if (!this.title.trim()) {
+                alert("Пожалуйста, введите заголовок.");
+                return;
+            }
+
             if (this.$parent.tasks.some(task => task.title === this.title) ||
                 this.$parent.completedTasks.some(task => task.title === this.title) ||
                 this.$parent.finishedTasks.some(task => task.title === this.title)) {
@@ -127,15 +137,30 @@ Vue.component('task-create', {
                 return;
             }
 
-            const items = [
-                { id: 1, text: this.itemOne },
-                { id: 2, text: this.itemTwo },
-                { id: 3, text: this.itemThree },
-                { id: 4, text: this.itemFour }
-            ];
+            const items = [];
 
-            if (items.some(item => item.text.trim() === '')) {
-                alert("Пожалуйста, заполните все 4 пункта.");
+            if (this.itemOne.trim() !== '') {
+                items.push({ id: 1, text: this.itemOne });
+            }
+
+            if (this.itemTwo.trim() !== '') {
+                items.push({ id: 2, text: this.itemTwo });
+            }
+
+            if (this.itemThree.trim() !== '') {
+                items.push({ id: 3, text: this.itemThree });
+            }
+
+            if (this.itemFour.trim() !== '') {
+                items.push({ id: 4, text: this.itemFour });
+            }
+
+            if (this.itemFive.trim() !== '') {
+                items.push({ id: 5, text: this.itemFive });
+            }
+
+             if (items.length === 0) {
+                alert("Пожалуйста, заполните хотя бы один пункт.");
                 return;
             }
 
@@ -152,14 +177,15 @@ Vue.component('task-create', {
             this.itemTwo = '';
             this.itemThree = '';
             this.itemFour = '';
+            this.itemFive = '';
         }
     }
 });
 
 Vue.component('task-on-start', {
     props: [
-    'tasks', 
-    'completedTasks'
+        'tasks',
+        'completedTasks'
     ],
     template: `
         <div>
@@ -170,7 +196,6 @@ Vue.component('task-on-start', {
                  @dragstart="onDragStart(index, $event)"
                  @dragover.prevent
                  @drop="onDrop(index, $event)"
-                 @dragend="onDragEnd"
             >
                 <h3>{{ task.title }}</h3>
                 <ul class="task-list">
@@ -192,7 +217,7 @@ Vue.component('task-on-start', {
     methods: {
         checkItems(task, completedTasks, item) {
             if (this.isTaskProcessFull) {
-                alert("Task column full");
+                alert("Достигнут максимум элементов");
                 item.checked = false;
                 return;
             }
@@ -228,17 +253,14 @@ Vue.component('task-on-start', {
                 this.$set(this.tasks, droppedIndex, this.tasks[index]);
                 this.$set(this.tasks, index, movedItem);
             }
-        },
-        onDragEnd(event) {
-            this.draggedIndex = null;
         }
     }
 });
 
 Vue.component('task-process', {
     props: [
-    'tasks', 
-    'completedTasks'
+        'tasks',
+        'completedTasks'
     ],
     template: `
         <div class="task-process">
@@ -248,7 +270,6 @@ Vue.component('task-process', {
                  @dragstart="onDragStart(index, $event)"
                  @dragover.prevent
                  @drop="onDrop(index, $event)"
-                 @dragend="onDragEnd"
             >
                 <h3>{{ completedTask.title }}</h3>
                 <ul class="task-list">
@@ -293,9 +314,6 @@ Vue.component('task-process', {
                 this.$set(this.completedTasks, droppedIndex, this.completedTasks[index]);
                 this.$set(this.completedTasks, index, movedItem);
             }
-        },
-        onDragEnd(event) {
-            this.draggedIndex = null;
         }
     }
 });
