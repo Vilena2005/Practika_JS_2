@@ -50,10 +50,16 @@ Vue.component('note-app', {
     },
     methods: {
         addTask(taskData) {
-            this.tasks.push({
-                title: taskData.title,
-                items: taskData.items.map(item => ({ ...item, checked: false }))
-            });
+            if (this.tasks.length < 3) {
+                this.tasks.push({
+                    title: taskData.title,
+                    items: taskData.items.map(item => ({ ...item, checked: false, editingText: false, editText: null })),
+                    editingTitle: false,
+                    editTitle: null
+                });
+            } else {
+                alert("В столбце START уже максимальное количество задач (3).");
+            }
         },
         moveTaskToProcess(task) {
             const index = this.tasks.findIndex(t => t === task);
@@ -103,7 +109,7 @@ Vue.component('task-create', {
             <input type="text" v-model="itemThree" placeholder="Пункт три">
             <input type="text" v-model="itemFour" v-if="itemThree !== '' && itemThree !== null" placeholder="Пункт четыре">
             <input type="text" v-model="itemFive" v-if="itemFour !== '' && itemFour !== null" placeholder="Пункт пять">
-            <button @click="createTask" class="create-button">Создать заметку</button>
+            <button @click="createTask" class="create-button"  :disabled="isTaskLimitReached">Создать заметку</button>
             <h4 v-if="isTaskLimitReached">Перед созданием новой задачи, выполните хотя бы одну задачу в первом столбце</h4>
         </div>
     `,
@@ -159,7 +165,7 @@ Vue.component('task-create', {
                 items.push({ id: 5, text: this.itemFive });
             }
 
-             if (items.length === 0) {
+            if (items.length === 0) {
                 alert("Пожалуйста, заполните хотя бы один пункт.");
                 return;
             }
@@ -197,13 +203,19 @@ Vue.component('task-on-start', {
                  @dragover.prevent
                  @drop="onDrop(index, $event)"
             >
-                <h3>{{ task.title }}</h3>
+                <h3 v-if="!task.editingTitle" @click="editTitle(task)">{{ task.title }}</h3>
+                <div v-else>
+                    <input type="text" v-model="task.title" @blur="saveTitle(task)" @keyup.enter="saveTitle(task)" />
+                </div>
+                <p v-if="task.editTitle">Изменено: {{ task.editTitle }}</p>
                 <ul class="task-list">
                     <li class="task-list-item" v-for="item in task.items" :key="item.id">
                         <input type="checkbox" :id="item.id" v-model="item.checked"
                                @change="checkItems(task, completedTasks, item)"
                                :disabled="isTaskProcessFull || ifChecked(item)">
-                        <p>{{ item.text }}</p>
+                        <span v-if="!item.editingText" @click="editItem(item)">{{ item.text }}</span>
+                        <input v-else type="text" v-model="item.text" @blur="saveItem(item)" @keyup.enter="saveItem(item)">
+                        <p v-if="item.editText">Изменено: {{ item.editText }}</p>
                     </li>
                 </ul>
             </div>
@@ -215,6 +227,20 @@ Vue.component('task-on-start', {
         }
     },
     methods: {
+        editTitle(task) {
+            task.editingTitle = true;
+        },
+        saveTitle(task) {
+            task.editingTitle = false;
+            task.editTitle = new Date().toLocaleString();
+        },
+        editItem(item) {
+            item.editingText = true;
+        },
+        saveItem(item) {
+            item.editingText = false;
+            item.editText = new Date().toLocaleString();
+        },
         checkItems(task, completedTasks, item) {
             if (this.isTaskProcessFull) {
                 alert("Достигнут максимум элементов");
@@ -271,17 +297,37 @@ Vue.component('task-process', {
                  @dragover.prevent
                  @drop="onDrop(index, $event)"
             >
-                <h3>{{ completedTask.title }}</h3>
+                 <h3 v-if="!completedTask.editingTitle" @click="editTitle(completedTask)">{{ completedTask.title }}</h3>
+                <div v-else>
+                    <input type="text" v-model="completedTask.title" @blur="saveTitle(completedTask)" @keyup.enter="saveTitle(completedTask)" />
+                </div>
+                 <p v-if="completedTask.editTitle">Изменено: {{ completedTask.editTitle }}</p>
                 <ul class="task-list">
                     <li class="task-list-item" v-for="item in completedTask.items" :key="item.id">
                         <input type="checkbox" :id="item.id" v-model="item.checked" @change="checkItems(completedTask, item)" :disabled="ifChecked(item)">
-                        <p :class="{ 'completed': item.checked }">{{ item.text }}</p>
+                         <span v-if="!item.editingText" @click="editItem(item)">{{ item.text }}</span>
+                        <input v-else type="text" v-model="item.text" @blur="saveItem(item)" @keyup.enter="saveItem(item)">
+                         <p v-if="item.editText">Изменено: {{ item.editText }}</p>
                     </li>
                 </ul>
             </div>
         </div>
     `,
     methods: {
+        editTitle(task) {
+            task.editingTitle = true;
+        },
+        saveTitle(task) {
+            task.editingTitle = false;
+            task.editTitle = new Date().toLocaleString();
+        },
+        editItem(item) {
+            item.editingText = true;
+        },
+        saveItem(item) {
+            item.editingText = false;
+            item.editText = new Date().toLocaleString();
+        },
         checkItems(completedTask, item) {
             let totalItems = completedTask.items.length;
             let checkedItems = completedTask.items.filter(item => item.checked).length;
@@ -324,16 +370,38 @@ Vue.component('task-finish', {
         <div class="task-finish">
             <h3 class="finish">FINISH</h3>
             <div v-for="finishedTask in finishedTasks" :key="finishedTask.title" class="task">
-                <h3>{{ finishedTask.title }}</h3>
+                <h3 v-if="!finishedTask.editingTitle" @click="editTitle(finishedTask)">{{ finishedTask.title }}</h3>
+                <div v-else>
+                    <input type="text" v-model="finishedTask.title" @blur="saveTitle(finishedTask)" @keyup.enter="saveTitle(finishedTask)" />
+                </div>
+                 <p v-if="finishedTask.editTitle">Изменено: {{ finishedTask.editTitle }}</p>
                 <ul class="task-list">
                     <li class="task-list-item" v-for="item in finishedTask.items" :key="item.id">
-                        <p>{{ item.text }}</p>
+                         <span v-if="!item.editingText" @click="editItem(item)">{{ item.text }}</span>
+                        <input v-else type="text" v-model="item.text" @blur="saveItem(item)" @keyup.enter="saveItem(item)">
+                         <p v-if="item.editText">Изменено: {{ item.editText }}</p>
                     </li>
                 </ul>
                 <p>Выполнено: {{ finishedTask.finishDate }}</p>
             </div>
         </div>
     `,
+    methods: {
+        editTitle(task) {
+            task.editingTitle = true;
+        },
+        saveTitle(task) {
+            task.editingTitle = false;
+            task.editTitle = new Date().toLocaleString();
+        },
+        editItem(item) {
+            item.editingText = true;
+        },
+        saveItem(item) {
+            item.editingText = false;
+            item.editText = new Date().toLocaleString();
+        },
+    },
 });
 
 let app = new Vue({
