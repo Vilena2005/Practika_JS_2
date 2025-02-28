@@ -10,10 +10,10 @@ Vue.component('note-app', {
             </header>
             <main>
                 <div class="tasks">
-                    <task-on-start :tasks="tasks" :completedTasks="completedTasks" @transfer-task="moveTaskToProcess"></task-on-start>
+                    <task-on-start :tasks="tasks" :completedTasks="completedTasks" @transfer-task="moveTaskToProcess" @remove-task="removeTask"></task-on-start>
                 </div>
                 <div class="tasks">
-                    <task-process :tasks="tasks" :completed-tasks="completedTasks" @transfer-task="moveTaskToFinish"></task-process>
+                    <task-process :tasks="tasks" :completed-tasks="completedTasks" @transfer-task="moveTaskToFinish" @remove-task="removeCompletedTask"></task-process>
                 </div>
                 <div class="tasks">
                     <task-finish :completedTasks="completedTasks" :finished-tasks="finishedTasks"></task-finish>
@@ -58,13 +58,15 @@ Vue.component('note-app', {
                     editTitle: null
                 });
             } else {
-                alert("В столбце START уже максимальное количество задач (3).");
+                alert("В столбце START уже максимальное количество задач");
             }
         },
         moveTaskToProcess(task) {
             const index = this.tasks.findIndex(t => t === task);
+            alert(`Задача "${task.title}" перемещена в столбец PROCESS`); 
             if (index !== -1) {
                 this.tasks.splice(index, 1);
+                
             }
 
             let countChecked = task.items.filter(item => item.checked).length;
@@ -74,14 +76,30 @@ Vue.component('note-app', {
         },
         moveTaskToFinish(task) {
             const index = this.completedTasks.findIndex(t => t === task);
+            alert(`Задача "${task.title}" перемещена в столбец FINISH`); 
             if (index !== -1) {
                 this.completedTasks.splice(index, 1);
+                
             }
 
             let countChecked = task.items.filter(item => item.checked).length;
             if (countChecked === task.items.length) {
                 task.finishDate = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 this.finishedTasks.push(task);
+            }
+        },
+         removeTask(task) {
+            const index = this.tasks.findIndex(t => t === task);
+            if (index !== -1) {
+                this.tasks.splice(index, 1);
+                alert(`Задача "${task.title}" удалена`); 
+            }
+        },
+        removeCompletedTask(task) {
+            const index = this.completedTasks.findIndex(t => t === task);
+            if (index !== -1) {
+                this.completedTasks.splice(index, 1);
+                alert(`Задача "${task.title}" удалена`); 
             }
         },
         clearAllTasks() {
@@ -91,6 +109,7 @@ Vue.component('note-app', {
             localStorage.removeItem('tasks');
             localStorage.removeItem('completedTasks');
             localStorage.removeItem('finishedTasks');
+            alert('Все задачи очищены'); 
         }
     },
     computed: {
@@ -135,8 +154,7 @@ Vue.component('task-create', {
                 alert("Пожалуйста, введите заголовок.");
                 return;
             }
-
-            if (this.$parent.tasks.some(task => task.title === this.title) ||
+             if (this.$parent.tasks.some(task => task.title === this.title) ||
                 this.$parent.completedTasks.some(task => task.title === this.title) ||
                 this.$parent.finishedTasks.some(task => task.title === this.title)) {
                 alert("Задача с таким названием уже существует");
@@ -218,6 +236,7 @@ Vue.component('task-on-start', {
                         <p v-if="item.editText">Изменено: {{ item.editText }}</p>
                     </li>
                 </ul>
+                <button @click="removeTask(task)">Удалить</button> 
             </div>
         </div>
     `,
@@ -247,8 +266,7 @@ Vue.component('task-on-start', {
                 item.checked = false;
                 return;
             }
-
-            let totalItems = task.items.length;
+             let totalItems = task.items.length;
             let checkedItems = task.items.filter(item => item.checked).length;
 
             let percentage = (checkedItems / totalItems) * 100;
@@ -279,7 +297,10 @@ Vue.component('task-on-start', {
                 this.$set(this.tasks, droppedIndex, this.tasks[index]);
                 this.$set(this.tasks, index, movedItem);
             }
-        }
+        },
+         removeTask(task) {
+            this.$emit('remove-task', task);
+        },
     }
 });
 
@@ -310,6 +331,7 @@ Vue.component('task-process', {
                          <p v-if="item.editText">Изменено: {{ item.editText }}</p>
                     </li>
                 </ul>
+                 <button @click="removeTask(completedTask)">Удалить</button> <!---- Remove ---->
             </div>
         </div>
     `,
@@ -360,7 +382,10 @@ Vue.component('task-process', {
                 this.$set(this.completedTasks, droppedIndex, this.completedTasks[index]);
                 this.$set(this.completedTasks, index, movedItem);
             }
-        }
+        },
+         removeTask(completedTask) {
+            this.$emit('remove-task', completedTask);
+        },
     }
 });
 
@@ -401,9 +426,9 @@ Vue.component('task-finish', {
             item.editingText = false;
             item.editText = new Date().toLocaleString();
         },
-    },
-});
+    }
+})
 
 let app = new Vue({
     el: '#app'
-});
+})
