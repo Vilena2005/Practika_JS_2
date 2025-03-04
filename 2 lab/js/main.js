@@ -19,13 +19,21 @@ Vue.component('note-app', {
                     <task-finish :completedTasks="completedTasks" :finished-tasks="finishedTasks"></task-finish>
                 </div>
             </main>
+
+            <modal-notification 
+                v-if="showNotification" 
+                :message="notificationMessage"
+                @close="showNotification = false">
+            </modal-notification>
         </div>
     `,
     data() {
         return {
             tasks: JSON.parse(localStorage.getItem('tasks')) || [],
             completedTasks: JSON.parse(localStorage.getItem('completedTasks')) || [],
-            finishedTasks: JSON.parse(localStorage.getItem('finishedTasks')) || []
+            finishedTasks: JSON.parse(localStorage.getItem('finishedTasks')) || [],
+            showNotification: false,
+            notificationMessage: ''
         };
     },
     watch: {
@@ -49,6 +57,10 @@ Vue.component('note-app', {
         }
     },
     methods: {
+        showModal(message) {
+            this.notificationMessage = message;
+            this.showNotification = true;
+        },
         addTask(taskData) {
             if (this.tasks.length < 3) {
                 this.tasks.push({
@@ -63,44 +75,40 @@ Vue.component('note-app', {
         },
         moveTaskToProcess(task) {
             const index = this.tasks.findIndex(t => t === task);
-            alert(`Задача "${task.title}" перемещена в столбец PROCESS`); 
             if (index !== -1) {
                 this.tasks.splice(index, 1);
-                
             }
-
             let countChecked = task.items.filter(item => item.checked).length;
             if (countChecked >= Math.ceil(task.items.length / 2)) {
                 this.completedTasks.push(task);
             }
+            this.showModal(`Задача "${task.title}" перемещена в столбец PROCESS`);
         },
         moveTaskToFinish(task) {
             const index = this.completedTasks.findIndex(t => t === task);
-            alert(`Задача "${task.title}" перемещена в столбец FINISH`); 
             if (index !== -1) {
                 this.completedTasks.splice(index, 1);
-                
             }
-
             let countChecked = task.items.filter(item => item.checked).length;
             if (countChecked === task.items.length) {
                 task.finishDate = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 this.finishedTasks.push(task);
             }
+            this.showModal(`Задача "${task.title}" перемещена в столбец FINISH`);
         },
          removeTask(task) {
             const index = this.tasks.findIndex(t => t === task);
             if (index !== -1) {
                 this.tasks.splice(index, 1);
-                alert(`Задача "${task.title}" удалена`); 
             }
+            this.showModal(`Задача "${task.title}" удалена`);
         },
         removeCompletedTask(task) {
             const index = this.completedTasks.findIndex(t => t === task);
             if (index !== -1) {
                 this.completedTasks.splice(index, 1);
-                alert(`Задача "${task.title}" удалена`); 
             }
+            this.showModal(`Задача "${task.title}" удалена`);
         },
         clearAllTasks() {
             this.tasks = [];
@@ -109,7 +117,7 @@ Vue.component('note-app', {
             localStorage.removeItem('tasks');
             localStorage.removeItem('completedTasks');
             localStorage.removeItem('finishedTasks');
-            alert('Все задачи очищены'); 
+            this.showModal('Все задачи очищены');
         }
     },
     computed: {
@@ -428,6 +436,19 @@ Vue.component('task-finish', {
         },
     }
 })
+
+Vue.component('modal-notification', {
+    props: ['message'],
+    template: `
+      <div class="modal">
+        <div class="modal-content">
+          <p>{{ message }}</p>
+          <button @click="$emit('close')">Закрыть</button>
+        </div>
+      </div>
+    `
+  });
+  
 
 let app = new Vue({
     el: '#app'
